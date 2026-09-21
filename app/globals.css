@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0b2b4a;
+  --navy-2: #133f69;
+  --cyan: #10a9ef;
+  --cyan-soft: #dff5ff;
+  --gold: #d6a11b;
+  --paper: #f7fafc;
+  --border: #d8e3ec;
+  --text: #102a43;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(16,169,239,.08), transparent 26rem),
+    #eef4f8;
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+::selection { background: #bae8fb; }
+@keyframes blinkYellow {
+  0%, 100% { box-shadow: inset 4px 0 0 #f4b400, 0 0 0 rgba(244,180,0,0); background: #fffaf0; }
+  50% { box-shadow: inset 4px 0 0 #f4b400, 0 0 18px rgba(244,180,0,.22); background: #fff2c7; }
+}
+@keyframes blinkRed {
+  0%, 100% { box-shadow: inset 4px 0 0 #dc2626, 0 0 0 rgba(220,38,38,0); background: #fff5f5; }
+  50% { box-shadow: inset 4px 0 0 #dc2626, 0 0 22px rgba(220,38,38,.26); background: #ffe1e1; }
+}
+.alert-yellow { animation: blinkYellow 1.8s ease-in-out infinite; }
+.alert-red { animation: blinkRed 1.35s ease-in-out infinite; }
+.app-shell { min-height: 100vh; display: grid; grid-template-columns: 238px 1fr; }
+@media (max-width: 900px) {
+  .app-shell { display: block; }
+  .desktop-only { display: none !important; }
+}
