@@ -17,16 +17,24 @@ export type Expediente = {
   tipo: string;
   numero: string;
   anio: number;
-  fecha_salida: string;
+  caratula: string;
+  fecha_ingreso: string;
+  fecha_salida: string | null;
+  area_procedente_id: string | null;
+
+  // Compatibilidad con el esquema existente:
+  // area_solicitante = snapshot de Área procedente.
+  // dependencia_* = Área destino.
   area_solicitante: string;
   dependencia_id: string | null;
-  dependencia_solicitante: string;
+  dependencia_solicitante: string | null;
+
   prioridad: "baja" | "normal" | "alta" | "urgente";
   ubicacion_actual: string;
   fecha_actualizacion_ubicacion: string;
   observaciones: string | null;
   estado: "en_tramite" | "devuelto" | "finalizado" | "archivado";
-  plazo_dias: 3 | 5 | 7 | null;
+  plazo_dias: number | null;
   plazo_definido_en: string | null;
   creado_por: string | null;
   actualizado_por: string | null;
@@ -43,3 +51,5 @@ export type HistorialExpediente = {
   usuario_id: string | null;
   created_at: string;
 };
+
+export type NivelAlerta = "ok" | "amarillo" | "rojo";

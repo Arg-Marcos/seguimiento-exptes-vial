@@ -2,13 +2,14 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,67 +18,92 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
     if (error) {
       setError("No se pudo ingresar. Verificá usuario y contraseña.");
       setLoading(false);
       return;
     }
 
-    router.replace("/");
+    const userId = data.user?.id;
+
+    if (!userId) {
+      setError("No se pudo identificar el perfil del usuario.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: perfil } = await supabase
+      .from("perfiles")
+      .select("rol")
+      .eq("id", userId)
+      .maybeSingle();
+
+    router.replace(perfil?.rol === "jefe" ? "/" : "/expedientes");
   }
 
   return (
-    <div className="grid min-h-screen bg-[#071f36] md:grid-cols-[1.15fr_.85fr]">
-      <section className="relative hidden overflow-hidden md:block">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(16,169,239,.25),transparent_30rem)]" />
-        <div className="relative flex h-full flex-col justify-between p-12 text-white">
-          <div className="flex items-center gap-4">
-            <img src="/escudo-dgsv.jpg" alt="Seguridad Vial" className="h-24 w-24 rounded-3xl object-cover shadow-2xl" />
-            <div>
-              <div className="text-sm font-black uppercase tracking-[.22em] text-sky-300">Policía de Salta</div>
-              <div className="mt-2 text-3xl font-black">Dirección General de Seguridad Vial</div>
-            </div>
-          </div>
-          <div>
-            <div className="text-5xl font-black leading-tight">Seguimiento de<br/>Exptes.</div>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-300">
-              Seguimiento interno, ubicación, plazos, prioridades y trazabilidad documental.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-sm text-slate-400">
-            <ShieldCheck size={18} className="text-sky-400" />
-            Acceso restringido a personal autorizado
-          </div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#071f36] px-4 py-8">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,169,239,.24),transparent_24rem),radial-gradient(circle_at_80%_80%,rgba(37,99,235,.16),transparent_28rem)]" />
+      <div className="absolute inset-x-0 bottom-0 h-28 opacity-25 [background-image:linear-gradient(90deg,transparent_0_6%,rgba(255,255,255,.5)_6%_12%,transparent_12%_18%)] [background-size:90px_24px]" />
+
+      <section className="relative w-full max-w-md rounded-[28px] border border-white/10 bg-white p-6 shadow-2xl shadow-black/25 md:p-8">
+        <div className="mb-5 flex items-center justify-center gap-5">
+          <img src="/escudo-policia.jpg" alt="Policía de Salta" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
+          <div className="h-14 w-px bg-slate-200" />
+          <img src="/escudo-dgsv.png" alt="Dirección General de Seguridad Vial" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
         </div>
-      </section>
 
-      <section className="flex items-center justify-center bg-white px-6 py-10">
-        <form onSubmit={ingresar} className="w-full max-w-md">
-          <img src="/escudo-dgsv.jpg" alt="" className="mx-auto mb-6 h-24 w-24 rounded-3xl object-cover md:hidden" />
-          <div className="text-xs font-black uppercase tracking-[.18em] text-sky-600">Seguridad Vial</div>
-          <h1 className="mt-2 text-3xl font-black text-[#0b2b4a]">Ingreso al sistema</h1>
-          <p className="mt-2 text-sm font-medium text-slate-500">Usá tu cuenta institucional.</p>
+        <div className="text-center">
+          <div className="text-xs font-bold uppercase tracking-[.22em] text-sky-600">Policía de Salta · Seguridad Vial</div>
+          <h1 className="mt-2 text-3xl font-bold text-[#0b2b4a]">Seguimiento de Exptes.</h1>
+          <p className="mt-2 text-sm font-semibold text-slate-500">Acceso interno para personal autorizado.</p>
+        </div>
 
-          <label className="mt-8 block text-xs font-black uppercase tracking-wide text-slate-600">Correo</label>
-          <div className="mt-2 flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-sky-400">
+        <form onSubmit={ingresar} className="mt-7">
+          <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Correo</label>
+          <div className="mt-2 flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 transition focus-within:border-sky-400 focus-within:ring-4 focus-within:ring-sky-100">
             <Mail size={17} className="text-slate-400" />
-            <input value={email} onChange={(e)=>setEmail(e.target.value)} type="email" required className="w-full bg-transparent outline-none" />
+            <input value={email} onChange={(e)=>setEmail(e.target.value)} type="email" required autoComplete="username" className="w-full bg-transparent font-semibold outline-none" />
           </div>
 
-          <label className="mt-4 block text-xs font-black uppercase tracking-wide text-slate-600">Contraseña</label>
-          <div className="mt-2 flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-sky-400">
+          <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-slate-600">Contraseña</label>
+          <div className="mt-2 flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 transition focus-within:border-sky-400 focus-within:ring-4 focus-within:ring-sky-100">
             <LockKeyhole size={17} className="text-slate-400" />
-            <input value={password} onChange={(e)=>setPassword(e.target.value)} type="password" required className="w-full bg-transparent outline-none" />
+            <input
+              value={password}
+              onChange={(e)=>setPassword(e.target.value)}
+              type={mostrarPassword ? "text" : "password"}
+              required
+              autoComplete="current-password"
+              className="min-w-0 flex-1 bg-transparent font-semibold outline-none"
+            />
+            <button
+              type="button"
+              onClick={()=>setMostrarPassword((v)=>!v)}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-white hover:text-sky-600"
+              aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {mostrarPassword ? <EyeOff size={18}/> : <Eye size={18}/>} 
+            </button>
           </div>
 
           {error && <div className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</div>}
 
-          <button disabled={loading} className="mt-6 h-12 w-full rounded-xl bg-sky-500 font-black text-white shadow-lg shadow-sky-200 transition hover:bg-sky-600 disabled:opacity-50">
+          <button disabled={loading} className="mt-6 h-12 w-full rounded-xl bg-sky-500 text-base font-bold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:bg-sky-600 disabled:opacity-50">
             {loading ? "Ingresando…" : "Ingresar"}
           </button>
         </form>
+
+        <div className="mt-6 flex items-center justify-center gap-2 border-t border-slate-100 pt-5 text-xs font-semibold text-slate-400">
+          <ShieldCheck size={16} className="text-sky-500" />
+          Sistema institucional de seguimiento documental
+        </div>
       </section>
-    </div>
+    </main>
   );
 }
