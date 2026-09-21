@@ -23,21 +23,32 @@ function estadoAlerta(e: Expediente) {
   if (exceso >= 0) return "amarillo";
   return "ok";
 }
-function resaltar(texto: string, q: string) {
-  if (!q.trim()) return texto;
-  const terms = q.trim().split(/\s+/).filter(Boolean);
-  let parts: React.ReactNode[] = [texto];
-  terms.forEach((term, idx) => {
-    parts = parts.flatMap((part, i) => {
-      if (typeof part !== "string") return [part];
-      const re = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")})`,"ig");
-      return part.split(re).map((x,j)=>re.test(x)
-        ? <mark key={`${idx}-${i}-${j}`} className="rounded bg-sky-100 px-0.5 font-black text-sky-800">{x}</mark>
-        : x
-      );
-    });
+function resaltar(texto: string, q: string): React.ReactNode {
+  const terminos = q.trim().split(/\s+/).filter(Boolean);
+  if (terminos.length === 0) return texto;
+
+  const patron = terminos
+    .map((termino) => termino.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+
+  const regex = new RegExp(`(${patron})`, "gi");
+
+  return texto.split(regex).map((parte, index) => {
+    const coincide = terminos.some(
+      (termino) => parte.toLowerCase() === termino.toLowerCase(),
+    );
+
+    return coincide ? (
+      <mark
+        key={`${parte}-${index}`}
+        className="rounded bg-sky-100 px-0.5 font-black text-sky-800"
+      >
+        {parte}
+      </mark>
+    ) : (
+      parte
+    );
   });
-  return parts;
 }
 
 export default function ExpedientesPage() {
@@ -101,7 +112,7 @@ export default function ExpedientesPage() {
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1120px] border-collapse text-left">
+          <table className="w-full min-w-1120px border-collapse text-left">
             <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-wide text-slate-500">
               <tr><th className="p-3">Expediente</th><th className="p-3">Dependencia</th><th className="p-3">Área</th><th className="p-3">Ubicación</th><th className="p-3">Prioridad</th><th className="p-3">Estado</th><th className="p-3">Plazo</th><th className="p-3">Actualizado</th><th className="p-3">Acciones</th></tr>
             </thead>
