@@ -468,6 +468,7 @@ export default function ExpedientesPage() {
           onClose={() => setDetalle(null)}
           onEdit={abrirEditar}
           onMove={abrirMover}
+          onSaved={cargar}
         />
 
         <MovimientoExpedienteModal

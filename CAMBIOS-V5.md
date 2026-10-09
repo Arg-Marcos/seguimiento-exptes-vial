@@ -44,3 +44,9 @@ Pendiente: asignar las cuentas a las mesas en la base remota; probar con las cue
 - Un expediente de prueba creado por Mesa: se conserva sin asignar, visible para Jefe/Director.
 
 La cuenta de Mesa no podrá iniciar sesión en la nueva versión hasta completar su mesa_id.
+
+## V6: perfiles automáticos
+
+Ejecutar `supabase/migracion-v6-perfil-automatico.sql` después de V5. Cada cuenta nueva en Authentication crea su perfil con rol mesa y mesa_id vacío. Las cuentas existentes sin perfil también reciben uno; se conservan los perfiles ya existentes. El administrador asigna nombre, rol (director/jefe/mesa) y mesa_id desde Table Editor > perfiles. Hasta asignar una mesa al rol mesa, el login sigue bloqueado. La función nunca toma rol ni mesa_id desde los metadatos enviados por el usuario.
+
+Probado en PostgreSQL embebido: alta automática, perfiles faltantes, reejecución sin duplicados y conservación de asignaciones previas.

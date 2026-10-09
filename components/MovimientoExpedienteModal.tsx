@@ -128,9 +128,10 @@ export default function MovimientoExpedienteModal({
         onClick={onClose}
       >
         <div
-          className="w-full max-w-xl rounded-3xl bg-white shadow-2xl"
+          className="modal-panel w-full max-w-xl rounded-3xl bg-white shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
+          <div className="modal-scroll">
           <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
             <div>
               <div className="text-xs font-bold uppercase tracking-wide text-sky-600">
@@ -235,6 +236,7 @@ export default function MovimientoExpedienteModal({
               {saving ? "Guardando…" : "Confirmar movimiento"}
             </button>
           </div>
+          </div>
         </div>
       </div>
 
@@ -244,9 +246,10 @@ export default function MovimientoExpedienteModal({
           onClick={() => setModalDep(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
+            className="modal-panel w-full max-w-md rounded-2xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="modal-scroll p-5">
             <div className="text-xs font-bold uppercase tracking-wide text-sky-600">
               Catálogo
             </div>
@@ -273,6 +276,7 @@ export default function MovimientoExpedienteModal({
               >
                 Guardar
               </button>
+            </div>
             </div>
           </div>
         </div>

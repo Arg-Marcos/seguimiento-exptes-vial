@@ -141,6 +141,7 @@ export default function AlertasPage() {
         <ExpedienteDetalleModal
           expediente={detalle}
           onClose={() => setDetalle(null)}
+          onSaved={() => cargarExpedientes().then((data) => setItems(data.filter((x) => x.estado === "en_tramite"))).catch(() => setErrorCarga("No se pudieron actualizar las alertas."))}
         />
       </AppShell>
     </JefeGuard>

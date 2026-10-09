@@ -37,7 +37,9 @@ export default function ExpedienteForm({
   }, [abierto, expediente, mesaPerfilId]);
 
   const [deps, setDeps] = useState<Dependencia[]>([]);
-  const [tipo, setTipo] = useState("Expte.");
+  const [tipo, setTipo] = useState("SICE");
+  const [tipoOtro, setTipoOtro] = useState("");
+  const tipoFinal = tipo === "OTRO" ? tipoOtro.trim().replace(/\s+/g, " ") : tipo;
   const [numero, setNumero] = useState("");
   const [anio, setAnio] = useState(String(new Date().getFullYear()));
   const [caratula, setCaratula] = useState("");
@@ -85,7 +87,9 @@ export default function ExpedienteForm({
     cargarDeps();
 
     if (expediente) {
-      setTipo(expediente.tipo);
+      const estandar = ["SICE", "SEPS"].includes(expediente.tipo.toUpperCase());
+      setTipo(estandar ? expediente.tipo.toUpperCase() : "OTRO");
+      setTipoOtro(estandar ? "" : expediente.tipo);
       setNumero(expediente.numero);
       setAnio(String(expediente.anio));
       setCaratula(expediente.caratula ?? "");
@@ -111,7 +115,8 @@ export default function ExpedienteForm({
         setPlazoOtro(String(plazo));
       }
     } else {
-      setTipo("Expte.");
+      setTipo("SICE");
+      setTipoOtro("");
       setNumero("");
       setAnio(String(new Date().getFullYear()));
       setCaratula("");
@@ -189,6 +194,7 @@ export default function ExpedienteForm({
   }
 
   async function guardar() {
+    if (!tipoFinal) return alert("Especificá el tipo de expediente al seleccionar OTRO.");
     if (!numero.trim() || !caratula.trim()) {
       return alert("Completá número y carátula.");
     }
@@ -216,7 +222,7 @@ export default function ExpedienteForm({
       .from("expedientes")
       .select("id")
       .eq("mesa_id", mesaId)
-      .eq("tipo", tipo)
+      .eq("tipo", tipoFinal)
       .eq("numero", numero.trim())
       .eq("anio", Number(anio))
       .neq(
@@ -233,7 +239,7 @@ export default function ExpedienteForm({
     if (duplicado) {
       setSaving(false);
       return alert(
-        `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
+        `Ya existe ${tipoFinal} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
       );
     }
 
@@ -245,7 +251,7 @@ export default function ExpedienteForm({
 
     const payload = {
       ...(expediente ? {} : { mesa_id: mesaId }),
-      tipo,
+      tipo: tipoFinal,
       numero: numero.trim(),
       anio: Number(anio),
       caratula: caratula.trim(),
@@ -308,7 +314,7 @@ export default function ExpedienteForm({
 
         if (error.code === "23505") {
           return alert(
-            `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
+            `Ya existe ${tipoFinal} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
           );
         }
 
@@ -326,7 +332,7 @@ export default function ExpedienteForm({
 
         if (error.code === "23505") {
           return alert(
-            `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
+            `Ya existe ${tipoFinal} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
           );
         }
 
@@ -356,9 +362,10 @@ export default function ExpedienteForm({
         onClick={onClose}
       >
         <div
-          className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
+          className="modal-panel w-full max-w-3xl rounded-3xl bg-white shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
+          <div className="modal-scroll">
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
             <div>
               <div className="text-xs font-bold uppercase tracking-[.16em] text-sky-600">
@@ -415,10 +422,9 @@ export default function ExpedienteForm({
                   onChange={(e) => setTipo(e.target.value)}
                   className="input"
                 >
-                  <option>Expte.</option>
-                  <option>Nota</option>
-                  <option>Memo</option>
-                  <option>Oficio</option>
+                  <option value="SICE">SICE</option>
+                  <option value="SEPS">SEPS</option>
+                  <option value="OTRO">OTRO</option>
                 </select>
               </Field>
 
@@ -441,6 +447,14 @@ export default function ExpedienteForm({
                 />
               </Field>
             </div>
+
+            {tipo === "OTRO" && (
+              <div className="md:col-span-2">
+                <Field label="Especificar tipo de expediente">
+                  <input value={tipoOtro} onChange={(e) => setTipoOtro(e.target.value)} placeholder="Por ejemplo: Oficio, Nota…" required className="input" />
+                </Field>
+              </div>
+            )}
 
             <SelectorDependencia
               label="Área procedente"
@@ -569,6 +583,7 @@ export default function ExpedienteForm({
               {saving ? "Guardando…" : "Guardar"}
             </button>
           </div>
+          </div>
         </div>
       </div>
 
@@ -578,9 +593,10 @@ export default function ExpedienteForm({
           onClick={() => setModalDep(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
+            className="modal-panel w-full max-w-md rounded-2xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="modal-scroll p-5">
             <div className="text-xs font-bold uppercase tracking-wide text-sky-600">
               Catálogo de dependencias
             </div>
@@ -615,6 +631,7 @@ export default function ExpedienteForm({
               >
                 Guardar
               </button>
+            </div>
             </div>
           </div>
         </div>

@@ -37,11 +37,13 @@ export default function Dashboard() {
     "todos" | "tramite" | "amarillo" | "rojo" | "finalizados"
   >("todos");
 
-  const items = useMemo(() => todos.filter((x) => !mesa || (mesa === "sin_asignar" ? !x.mesa_id : x.mesa_id === mesa)), [todos, mesa]);
+  const registrados = useMemo(() => todos.filter((x) => !mesa || (mesa === "sin_asignar" ? !x.mesa_id : x.mesa_id === mesa)), [todos, mesa]);
+
+  const items = useMemo(() => registrados.filter((x) => x.estado !== "archivado"), [registrados]);
 
   async function cargar() {
     try {
-      setItems((await cargarExpedientes()).filter((x) => x.estado !== "archivado"));
+      setItems(await cargarExpedientes());
       setErrorCarga("");
     } catch {
       setItems([]);
@@ -222,7 +224,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-2">
-                {alertas.slice(0, 5).map((e) => {
+                {alertas.slice(0, 5).map((e, index) => {
                   const alerta = estadoAlerta(e);
 
                   return (
@@ -230,13 +232,14 @@ export default function Dashboard() {
                       key={e.id}
                       type="button"
                       onClick={() => setDetalle(e)}
-                      className={`ui-card grid w-full gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-left md:grid-cols-[145px_minmax(180px,1fr)_145px_160px] md:items-center ${
+                      className={`ui-card grid w-full gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-left xl:grid-cols-[185px_minmax(0,1fr)_145px_160px] md:items-center ${
                         alerta.nivel === "rojo"
                           ? "bg-red-50/80"
                           : "bg-amber-50/80"
                       }`}
                     >
                       <div className="flex items-center gap-2">
+                        <span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">N° {index + 1}</span>
                         {alerta.nivel === "rojo" ? (
                           <AlertTriangle
                             size={17}
@@ -318,7 +321,7 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-2">
-              {expedientesDashboard.slice(0, 12).map((e) => {
+              {expedientesDashboard.slice(0, 12).map((e, index) => {
                 const alerta = estadoAlerta(e);
                 const urgente = e.prioridad === "urgente";
 
@@ -327,7 +330,7 @@ export default function Dashboard() {
                     key={e.id}
                     type="button"
                     onClick={() => setDetalle(e)}
-                    className={`ui-card grid w-full gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-left md:grid-cols-[75px_120px_minmax(180px,1.5fr)_160px_105px_105px_180px] md:items-center ${
+                    className={`ui-card grid w-full gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-left xl:grid-cols-[100px_110px_minmax(0,1.5fr)_minmax(0,1fr)_85px_90px_minmax(0,1fr)] md:items-center ${
                       urgente
                         ? "urgent-row"
                         : alerta.nivel === "amarillo"
@@ -335,8 +338,9 @@ export default function Dashboard() {
                           : "bg-white hover:bg-sky-50"
                     }`}
                   >
-                    <div className="text-xs font-bold uppercase text-sky-700">
-                      {e.tipo}
+                    <div className="flex min-w-0 items-center gap-2 text-xs font-bold uppercase text-sky-700">
+                      <span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-slate-600">N° {index + 1}</span>
+                      <span className="truncate" title={e.tipo}>{e.tipo}</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-[#0b2b4a]">
@@ -428,6 +432,7 @@ export default function Dashboard() {
           onClose={() => setDetalle(null)}
           onEdit={abrirEditar}
           onMove={abrirMover}
+          onSaved={cargar}
         />
 
         <MovimientoExpedienteModal

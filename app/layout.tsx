@@ -1,6 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
+  icons: { icon: [{ url: "/escudo-dgsv.png?v=2", type: "image/png" }], apple: "/escudo-dgsv.png" },
   title: "Seguimiento de Exptes. | Seguridad Vial",
   description: "Seguimiento interno de expedientes - Dirección General de Seguridad Vial",
 };
