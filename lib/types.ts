@@ -1,10 +1,13 @@
-export type Rol = "jefe" | "mesa";
+export type Rol = "director" | "jefe" | "mesa";
 
 export type Perfil = {
   id: string;
   nombre: string;
   rol: Rol;
+  mesa_id: string | null;
 };
+
+export type MesaEntrada = { id: string; nombre: string; activo: boolean };
 
 export type Dependencia = {
   id: string;
@@ -13,6 +16,7 @@ export type Dependencia = {
 };
 
 export type Expediente = {
+  mesa_id: string | null;
   id: string;
   tipo: string;
   numero: string;

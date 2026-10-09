@@ -1,5 +1,7 @@
 "use client";
 
+import { esAutoridad } from "@/lib/permisos";
+
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
@@ -14,14 +16,14 @@ export default function JefeGuard({
   const { perfil, loading } = usePerfil();
 
   useEffect(() => {
-    if (!loading && perfil && perfil.rol !== "jefe") {
+    if (!loading && perfil && !esAutoridad(perfil.rol)) {
       router.replace("/expedientes");
     }
   }, [loading, perfil, router]);
 
   return (
     <AuthGuard>
-      {loading || !perfil || perfil.rol !== "jefe" ? (
+      {loading || !perfil || !esAutoridad(perfil.rol) ? (
         <div className="flex min-h-screen items-center justify-center text-sm font-semibold text-slate-500">
           Cargando…
         </div>

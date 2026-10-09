@@ -10,6 +10,8 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
+import { esAutoridad } from "@/lib/permisos";
+import { cargarExpedientes } from "@/lib/cargarExpedientes";
 import AuthGuard from "@/components/AuthGuard";
 import AppShell from "@/components/AppShell";
 import ExpedienteDetalleModal from "@/components/ExpedienteDetalleModal";
@@ -22,7 +24,7 @@ import {
   fechaCorta,
   textoSeguimiento,
 } from "@/lib/expedientes";
-import type { Dependencia, Expediente } from "@/lib/types";
+import type { Dependencia, Expediente, MesaEntrada } from "@/lib/types";
 
 function normalizar(s: string) {
   return s
@@ -65,6 +67,9 @@ function resaltar(texto: string, q: string): React.ReactNode {
 export default function ExpedientesPage() {
   const { perfil } = usePerfil();
 
+  const [mesas, setMesas] = useState<MesaEntrada[]>([]);
+  const [mesa, setMesa] = useState("");
+  const [errorCarga, setErrorCarga] = useState("");
   const [items, setItems] = useState<Expediente[]>([]);
   const [deps, setDeps] = useState<Dependencia[]>([]);
 
@@ -80,11 +85,10 @@ export default function ExpedientesPage() {
   const [moviendo, setMoviendo] = useState<Expediente | null>(null);
 
   async function cargar() {
-    const [{ data: e }, { data: d }] = await Promise.all([
-      supabase
-        .from("expedientes")
-        .select("*")
-        .order("updated_at", { ascending: false }),
+    try {
+    const [e, { data: d, error: de }, { data: m, error: me }] = await Promise.all([
+      cargarExpedientes(),
+      supabase.from("mesas_entrada").select("id,nombre,activo").order("nombre"),
       supabase
         .from("dependencias")
         .select("id,nombre,activo")
@@ -92,8 +96,15 @@ export default function ExpedientesPage() {
         .order("nombre"),
     ]);
 
-    setItems((e as Expediente[]) ?? []);
-    setDeps((d as Dependencia[]) ?? []);
+    if (de || me) throw de ?? me;
+    setErrorCarga("");
+    setMesas((d as MesaEntrada[]) ?? []);
+    setItems(e);
+    setDeps((m as Dependencia[]) ?? []);
+    } catch (error) {
+      setItems([]);
+      setErrorCarga(error instanceof Error ? error.message : "No se pudieron cargar los expedientes. Revisá la migración y los permisos.");
+    }
   }
 
   useEffect(() => {
@@ -129,20 +140,22 @@ export default function ExpedientesPage() {
         if (prioridad && x.prioridad !== prioridad) return false;
         if (anio && String(x.anio) !== anio) return false;
         if (dep && x.dependencia_id !== dep) return false;
+        if (mesa === "sin_asignar" ? !!x.mesa_id : mesa && x.mesa_id !== mesa) return false;
 
         return true;
       }),
-    [items, buscar, estado, prioridad, anio, dep],
+    [items, buscar, estado, prioridad, anio, dep, mesa],
   );
 
   async function eliminar(e: Expediente) {
     if (!confirm(`¿Archivar ${e.tipo} ${e.numero}/${e.anio}?`)) return;
 
-    await supabase
+    const { error } = await supabase
       .from("expedientes")
       .update({ estado: "archivado" })
       .eq("id", e.id);
 
+    if (error) return alert(error.message);
     cargar();
   }
 
@@ -164,7 +177,7 @@ export default function ExpedientesPage() {
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-xs font-bold uppercase tracking-[.16em] text-sky-600">
-                Mesa de Entrada
+                {esAutoridad(perfil?.rol) ? "Todas las mesas de entrada" : mesas.find((m) => m.id === perfil?.mesa_id)?.nombre ?? "Mesa de Entrada"}
               </div>
               <h2 className="text-3xl font-bold text-[#0b2b4a]">
                 Expedientes
@@ -182,11 +195,19 @@ export default function ExpedientesPage() {
             </button>
           </div>
 
+          {errorCarga && <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-red-700">{errorCarga}</p>}
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <div className="mb-2 flex items-center gap-2 text-sm font-bold text-[#0b2b4a]">
               <Filter size={17} className="text-sky-600"/> Filtros
             </div>
 
+            {esAutoridad(perfil?.rol) && (
+              <select aria-label="Filtrar por mesa de entrada" value={mesa} onChange={(e) => setMesa(e.target.value)} className="filter-control filter mb-3 w-full">
+                <option value="">Todas las mesas de entrada</option>
+                {mesas.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                <option value="sin_asignar">Sin mesa asignada (registros anteriores)</option>
+              </select>
+            )}
             <div className="grid gap-2 lg:grid-cols-[2fr_1fr_1fr_90px_1.25fr_auto]">
               <div className="filter-control flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3">
                 <Search size={16} className="text-slate-400"/>
@@ -249,6 +270,7 @@ export default function ExpedientesPage() {
                   setPrioridad("");
                   setAnio("");
                   setDep("");
+                  setMesa("");
                 }}
                 className="filter-control h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 hover:bg-sky-50 hover:text-sky-700"
               >
@@ -258,10 +280,15 @@ export default function ExpedientesPage() {
           </div>
 
           <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="px-3 py-2 text-sm font-semibold text-slate-600">
+              {filtrados.length} mostrados · {mesa ? items.filter((x) => mesa === "sin_asignar" ? !x.mesa_id : x.mesa_id === mesa).length : items.length} registrados {mesa ? "en la mesa seleccionada" : "en las mesas accesibles"}
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-1220px border-collapse text-left">
                 <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
                   <tr>
+                    <th className="px-2.5 py-2">N°</th>
+                    <th className="px-2.5 py-2">Mesa de entrada</th>
                     <th className="px-2.5 py-2">Expediente</th>
                     <th className="px-2.5 py-2">Carátula</th>
                     <th className="px-2.5 py-2">Ingreso</th>
@@ -277,7 +304,7 @@ export default function ExpedientesPage() {
                 </thead>
 
                 <tbody>
-                  {filtrados.map((x) => {
+                  {filtrados.map((x, index) => {
                     const alerta = estadoAlerta(x);
                                         const urgente = x.prioridad === "urgente";
 
@@ -293,6 +320,8 @@ export default function ExpedientesPage() {
                               : ""
                         }`}
                       >
+                        <td className="px-2.5 py-2 font-bold text-slate-500">{index + 1}</td>
+                        <td className="px-2.5 py-2 text-xs font-semibold text-slate-600">{mesas.find((m) => m.id === x.mesa_id)?.nombre ?? "Sin asignar"}</td>
                         <td className="px-2.5 py-2">
                           <div className="flex items-center gap-1.5 font-bold text-[#0b2b4a]">
                             {alerta.nivel === "rojo" && (
@@ -429,6 +458,7 @@ export default function ExpedientesPage() {
             onClose={() => setModal(false)}
             onSaved={cargar}
             rol={perfil.rol}
+            mesaPerfilId={perfil.mesa_id}
             expediente={editando}
           />
         )}

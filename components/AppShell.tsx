@@ -1,5 +1,7 @@
 "use client";
 
+import { esAutoridad, nombreRol } from "@/lib/permisos";
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -34,7 +36,7 @@ export default function AppShell({
   const router = useRouter();
   const { perfil } = usePerfil();
 
-  const nav = perfil?.rol === "jefe" ? navJefe : navMesa;
+  const nav = esAutoridad(perfil?.rol) ? navJefe : navMesa;
 
   async function salir() {
     limpiarPerfilCache();
@@ -96,7 +98,7 @@ export default function AppShell({
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="flex items-center gap-2 text-xs font-bold text-sky-300">
               <ShieldCheck size={16} />
-              {perfil?.rol === "jefe" ? "PERFIL JEFE" : "MESA DE ENTRADA"}
+              {nombreRol(perfil?.rol).toUpperCase()}
             </div>
 
             <div className="mt-1 truncate text-sm font-semibold">
@@ -136,7 +138,7 @@ export default function AppShell({
 
             <div className="rounded-xl bg-sky-50 px-3 py-2 text-right">
               <div className="text-xs font-bold uppercase tracking-wide text-sky-600">
-                {perfil?.rol === "jefe" ? "Jefe" : "Mesa de Entrada"}
+                {nombreRol(perfil?.rol)}
               </div>
               <div className="text-xs font-semibold text-slate-700">
                 {perfil?.nombre ?? "Usuario"}

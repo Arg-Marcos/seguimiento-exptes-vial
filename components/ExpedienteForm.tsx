@@ -1,9 +1,11 @@
 "use client";
 
+import { esAutoridad } from "@/lib/permisos";
+
 import { useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { Dependencia, Expediente, Rol } from "@/lib/types";
+import type { Dependencia, Expediente, Rol, MesaEntrada } from "@/lib/types";
 
 type SelectorDestino = "procedente" | "destino";
 
@@ -12,6 +14,7 @@ type Props = {
   onClose: () => void;
   onSaved: () => void;
   rol: Rol;
+  mesaPerfilId: string | null;
   expediente?: Expediente | null;
 };
 
@@ -20,9 +23,18 @@ export default function ExpedienteForm({
   onClose,
   onSaved,
   rol,
+  mesaPerfilId,
   expediente,
 }: Props) {
   const hoy = new Date().toISOString().slice(0, 10);
+
+  const [mesas, setMesas] = useState<MesaEntrada[]>([]);
+  const [mesaId, setMesaId] = useState("");
+  useEffect(() => {
+    if (!abierto) return;
+    setMesaId(expediente?.mesa_id ?? mesaPerfilId ?? "");
+    supabase.from("mesas_entrada").select("id,nombre,activo").eq("activo", true).order("nombre").then(({ data }) => setMesas(data ?? []));
+  }, [abierto, expediente, mesaPerfilId]);
 
   const [deps, setDeps] = useState<Dependencia[]>([]);
   const [tipo, setTipo] = useState("Expte.");
@@ -165,7 +177,7 @@ export default function ExpedienteForm({
   }
 
   function plazoFinal() {
-    if (rol !== "jefe") return expediente?.plazo_dias ?? null;
+    if (!esAutoridad(rol)) return expediente?.plazo_dias ?? null;
     if (!plazoOpcion) return null;
 
     if (plazoOpcion === "otro") {
@@ -191,9 +203,10 @@ export default function ExpedienteForm({
       );
     }
 
+    if (!mesaId) return alert("Seleccioná la mesa de entrada que registra el expediente.");
     const plazo = plazoFinal();
 
-    if (rol === "jefe" && plazoOpcion === "otro" && !plazo) {
+    if (esAutoridad(rol) && plazoOpcion === "otro" && !plazo) {
       return alert("Ingresá una cantidad válida de días para el plazo.");
     }
 
@@ -202,6 +215,7 @@ export default function ExpedienteForm({
     const { data: duplicado, error: duplicadoError } = await supabase
       .from("expedientes")
       .select("id")
+      .eq("mesa_id", mesaId)
       .eq("tipo", tipo)
       .eq("numero", numero.trim())
       .eq("anio", Number(anio))
@@ -219,17 +233,18 @@ export default function ExpedienteForm({
     if (duplicado) {
       setSaving(false);
       return alert(
-        `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados.`,
+        `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
       );
     }
 
     const { data: auth } = await supabase.auth.getUser();
 
     const cambioPlazo =
-      rol === "jefe" &&
+      esAutoridad(rol) &&
       plazo !== (expediente?.plazo_dias ?? null);
 
     const payload = {
+      ...(expediente ? {} : { mesa_id: mesaId }),
       tipo,
       numero: numero.trim(),
       anio: Number(anio),
@@ -248,7 +263,7 @@ export default function ExpedienteForm({
         : null,
 
       prioridad:
-        rol === "jefe"
+        esAutoridad(rol)
           ? prioridad
           : expediente?.prioridad ?? "normal",
 
@@ -256,14 +271,14 @@ export default function ExpedienteForm({
       estado,
 
       plazo_dias:
-        rol === "jefe"
+        esAutoridad(rol)
           ? plazo
           : expediente?.plazo_dias ?? null,
 
       // Se conserva para auditoría del momento en que el Jefe definió/cambió
       // el plazo, aunque el cálculo visual se realiza desde fecha_ingreso.
       plazo_definido_en:
-        rol === "jefe"
+        esAutoridad(rol)
           ? plazo
             ? cambioPlazo || !expediente?.plazo_definido_en
               ? new Date().toISOString()
@@ -293,7 +308,7 @@ export default function ExpedienteForm({
 
         if (error.code === "23505") {
           return alert(
-            `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados.`,
+            `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
           );
         }
 
@@ -311,7 +326,7 @@ export default function ExpedienteForm({
 
         if (error.code === "23505") {
           return alert(
-            `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados.`,
+            `Ya existe ${tipo} ${numero.trim()}/${anio}. No se permiten expedientes duplicados dentro de la misma mesa.`,
           );
         }
 
@@ -365,6 +380,14 @@ export default function ExpedienteForm({
           </div>
 
           <div className="grid gap-3 p-5 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <Field label="Mesa de entrada que registra">
+                <select value={mesaId} onChange={(e) => setMesaId(e.target.value)} disabled={!!expediente || !esAutoridad(rol)} className="input">
+                  <option value="">Seleccionar mesa de entrada</option>
+                  {mesas.map((mesa) => <option key={mesa.id} value={mesa.id}>{mesa.nombre}</option>)}
+                </select>
+              </Field>
+            </div>
             <div className="md:col-span-2">
               <Field label="Carátula">
                 <input
@@ -450,7 +473,7 @@ export default function ExpedienteForm({
               }
             />
 
-            {rol === "jefe" && (
+            {esAutoridad(rol) && (
               <>
                 <Field label="Prioridad">
                   <select

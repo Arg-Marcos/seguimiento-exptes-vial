@@ -1,8 +1,11 @@
 "use client";
 
+import { esAutoridad } from "@/lib/permisos";
+
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { limpiarPerfilCache } from "@/hooks/usePerfil";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -37,13 +40,21 @@ export default function LoginPage() {
       return;
     }
 
-    const { data: perfil } = await supabase
+    const { data: perfil, error: perfilError } = await supabase
       .from("perfiles")
-      .select("rol")
+      .select("rol,mesa_id")
       .eq("id", userId)
       .maybeSingle();
 
-    router.replace(perfil?.rol === "jefe" ? "/" : "/expedientes");
+    if (perfilError || !perfil || !["director", "jefe", "mesa"].includes(perfil.rol) || (perfil.rol === "mesa" && !perfil.mesa_id)) {
+      await supabase.auth.signOut();
+      limpiarPerfilCache();
+      setError("Tu usuario todavía no tiene un perfil o una mesa asignada. Consultá al administrador.");
+      setLoading(false);
+      return;
+    }
+    limpiarPerfilCache();
+    router.replace(esAutoridad(perfil?.rol) ? "/" : "/expedientes");
   }
 
   return (
@@ -53,9 +64,9 @@ export default function LoginPage() {
 
       <section className="relative w-full max-w-md rounded-[28px] border border-white/10 bg-white p-6 shadow-2xl shadow-black/25 md:p-8">
         <div className="mb-5 flex items-center justify-center gap-5">
-          <img src="/escudo-policia.jpg" alt="Policía de Salta" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
+          <img src="/escudo-policia-transparente.png" alt="Policía de Salta" className="h-24 w-24 object-contain drop-shadow-md" />
           <div className="h-14 w-px bg-slate-200" />
-          <img src="/escudo-dgsv.png" alt="Dirección General de Seguridad Vial" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
+          <img src="/escudo-dgsv.png" alt="Dirección General de Seguridad Vial" className="h-24 w-24 object-contain drop-shadow-md" />
         </div>
 
         <div className="text-center">

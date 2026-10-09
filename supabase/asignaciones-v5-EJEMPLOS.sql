@@ -1,0 +1,12 @@
+-- EJEMPLOS: sustituir UUID/nombres tras revisar el diagnóstico.
+-- Crear primero cada cuenta en Authentication > Users.
+-- Roles: director, jefe, mesa. Códigos de mesa:
+-- operaciones_dsv | seguridad_vial_dgsv | general_vial_sjp
+-- Hasta nueve combinaciones de rol/mesa; admite varios usuarios por combinación.
+-- insert into public.perfiles(id,nombre,rol,mesa_id)
+-- values ('UUID_DE_AUTH','Nombre Apellido','mesa','operaciones_dsv')
+-- on conflict (id) do update set nombre=excluded.nombre,rol=excluded.rol,mesa_id=excluded.mesa_id;
+-- update public.perfiles set mesa_id='CODIGO_CONFIRMADO' where id='UUID_CONFIRMADO';
+-- SOLO si se confirma que TODOS los registros existentes son de la misma mesa:
+-- update public.expedientes set mesa_id='CODIGO_CONFIRMADO' where mesa_id is null;
+-- Alternativa: asignar individualmente por ID o por creador, tras confirmar su origen.

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Clock3 } from "lucide-react";
+import FiltroMesa from "@/components/FiltroMesa";
+import { cargarExpedientes } from "@/lib/cargarExpedientes";
 import AppShell from "@/components/AppShell";
 import ExpedienteDetalleModal from "@/components/ExpedienteDetalleModal";
 import JefeGuard from "@/components/JefeGuard";
-import { supabase } from "@/lib/supabase";
 import {
   estadoAlerta,
   fechaCorta,
@@ -14,6 +15,8 @@ import {
 import type { Expediente } from "@/lib/types";
 
 export default function AlertasPage() {
+  const [mesa, setMesa] = useState("");
+  const [errorCarga, setErrorCarga] = useState("");
   const [items, setItems] = useState<Expediente[]>([]);
   const [tipo, setTipo] = useState("");
   const [detalle, setDetalle] = useState<Expediente | null>(null);
@@ -22,20 +25,14 @@ export default function AlertasPage() {
     const p = new URLSearchParams(window.location.search);
     setTipo(p.get("tipo") ?? "");
 
-    supabase
-      .from("expedientes")
-      .select("*")
-      .eq("estado", "en_tramite")
-      .order("updated_at", { ascending: false })
-      .then(({ data }) =>
-        setItems((data as Expediente[]) ?? []),
-      );
+    cargarExpedientes().then((data) => setItems(data.filter((x) => x.estado === "en_tramite"))).catch(() => setErrorCarga("No se pudieron cargar las alertas. Revisá los permisos y la conexión."));
   }, []);
 
   const alertas = useMemo(
     () =>
       items
         .filter((x) => {
+          if (mesa && (mesa === "sin_asignar" ? !!x.mesa_id : x.mesa_id !== mesa)) return false;
           const nivel = estadoAlerta(x).nivel;
           if (nivel === "ok") return false;
           return !tipo || nivel === tipo;
@@ -49,7 +46,7 @@ export default function AlertasPage() {
             new Date(b.fecha_ingreso).getTime()
           );
         }),
-    [items, tipo],
+    [items, tipo, mesa],
   );
 
   return (
@@ -64,10 +61,12 @@ export default function AlertasPage() {
               Alertas de plazos
             </h2>
             <p className="mt-1 max-w-2xl text-sm font-semibold text-slate-500">
-              Solo visible para el perfil Jefe. Acá aparecen los expedientes que alcanzaron o superaron el plazo establecido.
+              Visible para Director y Jefe. Acá aparecen los expedientes que alcanzaron o superaron el plazo establecido.
             </p>
           </div>
 
+          <FiltroMesa value={mesa} onChange={setMesa} />
+          {errorCarga && <p role="alert" className="mb-3 text-red-700">{errorCarga}</p>}
           <div className="space-y-3">
             {alertas.length === 0 && (
               <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center font-semibold text-slate-500">

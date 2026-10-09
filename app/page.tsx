@@ -8,12 +8,13 @@ import {
   FileText,
   Plus,
 } from "lucide-react";
+import FiltroMesa from "@/components/FiltroMesa";
+import { cargarExpedientes } from "@/lib/cargarExpedientes";
 import AppShell from "@/components/AppShell";
 import ExpedienteDetalleModal from "@/components/ExpedienteDetalleModal";
 import ExpedienteForm from "@/components/ExpedienteForm";
 import JefeGuard from "@/components/JefeGuard";
 import MovimientoExpedienteModal from "@/components/MovimientoExpedienteModal";
-import { supabase } from "@/lib/supabase";
 import { usePerfil } from "@/hooks/usePerfil";
 import {
   estadoAlerta,
@@ -25,7 +26,9 @@ import type { Expediente } from "@/lib/types";
 export default function Dashboard() {
   const { perfil } = usePerfil();
 
-  const [items, setItems] = useState<Expediente[]>([]);
+  const [mesa, setMesa] = useState("");
+  const [errorCarga, setErrorCarga] = useState("");
+  const [todos, setItems] = useState<Expediente[]>([]);
   const [modal, setModal] = useState(false);
   const [detalle, setDetalle] = useState<Expediente | null>(null);
   const [moviendo, setMoviendo] = useState<Expediente | null>(null);
@@ -34,15 +37,16 @@ export default function Dashboard() {
     "todos" | "tramite" | "amarillo" | "rojo" | "finalizados"
   >("todos");
 
-  async function cargar() {
-    const { data } = await supabase
-      .from("expedientes")
-      .select("*")
-      .neq("estado", "archivado")
-      .order("updated_at", { ascending: false })
-      .limit(100);
+  const items = useMemo(() => todos.filter((x) => !mesa || (mesa === "sin_asignar" ? !x.mesa_id : x.mesa_id === mesa)), [todos, mesa]);
 
-    setItems((data as Expediente[]) ?? []);
+  async function cargar() {
+    try {
+      setItems((await cargarExpedientes()).filter((x) => x.estado !== "archivado"));
+      setErrorCarga("");
+    } catch {
+      setItems([]);
+      setErrorCarga("No se pudieron cargar los expedientes. Revisá los permisos y la conexión.");
+    }
   }
 
   useEffect(() => {
@@ -115,10 +119,12 @@ export default function Dashboard() {
     <JefeGuard>
       <AppShell>
         <div className="p-4 md:p-6">
+          <FiltroMesa value={mesa} onChange={setMesa} />
+          {errorCarga && <p role="alert" className="mb-3 text-red-700">{errorCarga}</p>}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-slate-500">
-                Panel del Jefe
+                Panel de Dirección y Jefatura
               </div>
               <h2 className="text-3xl font-bold text-[#0b2b4a]">
                 Seguimiento de expedientes
@@ -412,6 +418,7 @@ export default function Dashboard() {
             onClose={() => setModal(false)}
             onSaved={cargar}
             rol={perfil.rol}
+            mesaPerfilId={perfil.mesa_id}
             expediente={editando}
           />
         )}

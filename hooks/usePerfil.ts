@@ -23,7 +23,7 @@ async function obtenerPerfil(): Promise<Perfil | null> {
 
     const { data, error } = await supabase
       .from("perfiles")
-      .select("id,nombre,rol")
+      .select("id,nombre,rol,mesa_id")
       .eq("id", auth.user.id)
       .maybeSingle();
 
